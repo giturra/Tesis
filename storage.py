@@ -34,7 +34,7 @@ class BaseStorage:
 
 class Vocabulary(BaseStorage):
 
-    def __init__(self, size):
+    def __init__(self, v_size):
         super().__init__(size)
     
     def add(self, word_rep):
@@ -45,6 +45,45 @@ class Vocabulary(BaseStorage):
 
 
 class Context(BaseStorage):
-    ...
+
+    def __init__(self, c_size):
+        super().__init__(size)
+
+    def add(self, word):
+        if not self.is_full():
+            self.values_storage[word] = self.counter
+            self.c_counter += 1
 
 
+class WordRep:
+
+    def __init__(self, word, c_size):
+        self.word = word
+        self.c_size = c_size
+        self.c_counter = 0
+        # save counter between target and its contexts
+        self.contexts = defaultdict(int)
+        # for tracking number of tweets that appears
+        #self.num_tweets = 0
+
+    def is_empty(self):
+        return self.c_counter == 0
+
+    def is_full(self):
+        return self.c_counter == self.c_size
+
+    def add_context(self, context):
+        if not self.is_full() and context not in self.contexts:
+            self.c_counter += 1
+            self.contexts[context] += 1
+        elif context in self.contexts:
+            self.contexts[context] += 1
+
+    def __len__(self):
+        return len(self.contexts.keys())
+
+    def __repr__(self):
+        return self.word
+
+    def __getitem__(self, context):
+        return self.contexts[context]
