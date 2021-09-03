@@ -44,3 +44,7 @@ class Vocabulary(BaseStorage):
             self.values_storage = tuple(self.values_storage.keys())
 
 
+class Context(BaseStorage):
+    ...
+
+
