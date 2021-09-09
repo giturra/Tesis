@@ -35,13 +35,13 @@ class BaseStorage:
 class Vocabulary(BaseStorage):
 
     def __init__(self, v_size):
-        super().__init__(size)
+        super().__init__(v_size)
     
     def add(self, word_rep):
         if not self.is_full():
             self.values_storage[word_rep] = word_rep
             self.counter += 1
-            self.values_storage = tuple(self.values_storage.keys())
+            self.values_words = tuple(self.values_storage.keys())
 
 
 class Context(BaseStorage):
@@ -52,7 +52,7 @@ class Context(BaseStorage):
     def add(self, word):
         if not self.is_full():
             self.values_storage[word] = self.counter
-            self.c_counter += 1
+            self.counter += 1
 
 
 class WordRep:
