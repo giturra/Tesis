@@ -47,7 +47,7 @@ class Vocabulary(BaseStorage):
 class Context(BaseStorage):
 
     def __init__(self, c_size):
-        super().__init__(size)
+        super().__init__(c_size)
 
     def add(self, word):
         if not self.is_full():
