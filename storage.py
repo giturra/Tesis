@@ -19,7 +19,7 @@ class BaseStorage:
         ...
 
     def __contains__(self, key):
-        return key in self.storage
+        return key in self.values_storage
     
     def __len__(self):
         return len(self.values_word)
@@ -39,9 +39,9 @@ class Vocabulary(BaseStorage):
     
     def add(self, word_rep):
         if not self.is_full():
-            self.values_storage[word_rep] = word_rep
+            self.values_storage[word_rep.word] = word_rep
             self.counter += 1
-            self.values_words = tuple(self.values_storage.keys())
+            self.values_word = tuple(self.values_storage.keys())
 
 
 class Context(BaseStorage):
@@ -53,6 +53,7 @@ class Context(BaseStorage):
         if not self.is_full():
             self.values_storage[word] = self.counter
             self.counter += 1
+            self.values_word = tuple(self.values_storage.keys())
 
 
 class WordRep:
@@ -65,7 +66,8 @@ class WordRep:
         self.contexts = defaultdict(int)
         # for tracking number of tweets that appears
         #self.num_tweets = 0
-
+        self.counter = 0
+        
     def is_empty(self):
         return self.c_counter == 0
 
