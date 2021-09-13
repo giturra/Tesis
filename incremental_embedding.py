@@ -71,7 +71,8 @@ class WordContextMatrix(IncrementalWordEmbedding):
         tokens = self.process_text(x)
         #print(tokens)
         for w in tokens:
-            self.vocabulary.add(WordRep(w, self.c_size))
+            if w not in self.vocabulary:
+                self.vocabulary.add(WordRep(w, self.c_size))
             self.d += 1
         for i, w in enumerate(tokens):
             contexts = _get_contexts(i, self.w_size, tokens)
@@ -81,7 +82,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
                 if c not in self.contexts:
                     # if context full no add the word
                     self.contexts.add(c)
-                if c != w and c in self.contexts and w in self.vocabulary:
+                if c in self.contexts:
                     self.vocabulary[w].add_context(c)
         return self
     
@@ -92,9 +93,11 @@ class WordContextMatrix(IncrementalWordEmbedding):
             contexts = word_rep.contexts.items()
             for context, coocurence in contexts:
                 ind_c = self.contexts[context]
-                #pmi = (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
-                #embedding[ind_c] = np.log2(max(0, pmi))
-                embedding[ind_c] = coocurence 
+                pmi = np.log2(
+                    (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
+                )
+                embedding[ind_c] = max(0, pmi)
+                # embedding[ind_c] = coocurence 
             return embedding
         return False
 
@@ -113,16 +116,20 @@ from river.datasets import SMSSpam
 
 dataset = SMSSpam()
 
-wcm = WordContextMatrix(10_000, 10, 3, on='body')
+wcm = WordContextMatrix(10_000, 20, 3, on='body')
 
 # question el vocab size debe ser siempre mayor o igual al context size?
 
 for xi, y in dataset:
     wcm = wcm.learn_one(xi)
-print(wcm.vocabulary['its'].contexts)
-print(wcm.get_embedding('its'))
+print(wcm.vocabulary['he'].contexts)
+print(wcm.get_embedding('he'))
+# print(len(wcm.contexts.values_storage.keys()))
+print(len(wcm.vocabulary.values_storage.items()))
+print(wcm.vocabulary.counter)
+print(wcm.vocabulary.is_full())
 #print(wcm.get_embedding('burger').shape)
-print('its' in wcm.vocabulary)
+# print('its' in wcm.vocabulary)
 #print(cosine(wcm.get_embedding('sex'), wcm.get_embedding('bedroom')))
 # print(wcm.vocabulary['until'].contexts)
 # print(wcm.vocabulary.size)
