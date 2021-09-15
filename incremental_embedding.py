@@ -71,26 +71,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
         self.is_ppmi = is_ppmi
     
     def transform_one(self, x):
-        return self.process_text(x)
-
-    # def learn_one(self, x):
-    #     tokens = self.process_text(x)
-    #     #print(tokens)
-    #     for w in tokens:
-    #         if w not in self.vocabulary:
-    #             self.vocabulary.add(WordRep(w, self.c_size))
-    #         self.d += 1
-    #     for i, w in enumerate(tokens):
-    #         contexts = _get_contexts(i, self.w_size, tokens)
-    #         if w in self.vocabulary:
-    #             self.vocabulary[w].counter += 1
-    #         for c in contexts:
-    #             if c not in self.contexts:
-    #                 # if context full no add the word
-    #                 self.contexts.add(c)
-    #             if c in self.contexts:
-    #                 self.vocabulary[w].add_context(c)
-    #     return self
+        ...
 
     def learn_one(self, x, **kwargs):
         tokens = kwargs['tokens']
