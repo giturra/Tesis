@@ -40,17 +40,26 @@ class Vocabulary(BaseStorage):
     def add(self, word_rep):
         if not self.is_full():
             self.values_storage[word_rep.word] = word_rep
+            self.values_storage[word_rep.word].counter += 1
             self.counter += 1
             self.values_word = tuple(self.values_storage.keys())
+    
+    def __getitem__(self, word):
+        if word in self.values_storage:
+            return self.values_storage[word]
+        return self.values_storage['unk']
 
 
 class Context(BaseStorage):
 
     def __init__(self, c_size):
         super().__init__(c_size)
+        self.counter = 1
 
     def add(self, word):
-        if not self.is_full():
+        if len(self) == 0:
+                self.values_storage['unk'] = 0 
+        if word not in self.values_storage and not self.is_full(): 
             self.values_storage[word] = self.counter
             self.counter += 1
             self.values_word = tuple(self.values_storage.keys())
@@ -75,11 +84,22 @@ class WordRep:
         return self.c_counter == self.c_size
 
     def add_context(self, context):
-        if not self.is_full() and context not in self.contexts:
+        if context in self.contexts or self.is_full():
+            if context in self.contexts:
+                self.contexts[context] += 1
+            else:
+                self.contexts['unk'] += 1
+        elif self.c_counter + 1 == self.c_size:
+            self.contexts['unk'] += 1
             self.c_counter += 1
+        else:
             self.contexts[context] += 1
-        elif context in self.contexts:
-            self.contexts[context] += 1
+            self.c_counter += 1
+        # if not self.is_full() and context not in self.contexts:
+        #     self.c_counter += 1
+        #     self.contexts[context] += 1
+        # elif context in self.contexts:
+        #     self.contexts[context] += 1
 
     def __len__(self):
         return len(self.contexts.keys())

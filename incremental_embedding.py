@@ -69,6 +69,8 @@ class WordContextMatrix(IncrementalWordEmbedding):
         self.d = 0
 
         self.is_ppmi = is_ppmi
+
+        self.vocabulary.add(WordRep('unk', self.c_size))
     
     def transform_one(self, x):
         ...
@@ -80,13 +82,18 @@ class WordContextMatrix(IncrementalWordEmbedding):
         if x not in self.vocabulary:
             self.vocabulary.add(WordRep(x, self.c_size))
         contexts = _get_contexts(i, self.w_size, tokens)
-        if x in self.vocabulary:
-            self.vocabulary[x].counter += 1
+        focus_word = self.vocabulary[x]
+        # if x in self.vocabulary:
+        #     self.vocabulary[x].counter += 1
         for c in contexts:
             if c not in self.contexts:
                 self.contexts.add(c)
-            if c in self.contexts and x in self.vocabulary:
-                self.vocabulary[x].add_context(c)
+            if c not in self.contexts and len(self.contexts) == self.c_size and focus_word.word == 'unk':
+                focus_word.add_context('unk')
+            elif c not in self.contexts:
+                focus_word.add_context('unk')
+            elif c in self.contexts:
+                focus_word.add_context(c)
         return self
     
     def get_embedding(self, x):
@@ -96,13 +103,18 @@ class WordContextMatrix(IncrementalWordEmbedding):
             contexts = word_rep.contexts.items()
             if self.is_ppmi:
                 for context, coocurence in contexts:
+                    
                     ind_c = self.contexts[context]
+                    print(ind_c)
                     pmi = np.log2(
                         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
                     )
+                    
                     embedding[ind_c] = max(0, pmi)
+                    print(embedding[ind_c])
             else:
                 for context, coocurence in contexts:
+                    print(coocurence)
                     ind_c = self.contexts[context]
                     embedding[ind_c] = coocurence
                 # embedding[ind_c] = coocurence 
@@ -125,10 +137,13 @@ def _preprocessing_streps(preprocessing_steps, x):
         x = step(x)
     return x
 
-def run(stream_data, model, on=None, tokenizer=None):
+def run(stream_data, model, on=None, tokenizer=None, lower_case=True):
+    # think if we need a class for this part
     preprocessing_steps = []
     if on is not None:
         preprocessing_steps.append(operator.itemgetter(on))
+    if lower_case:
+        preprocessing_steps.append(str.lower)
     preprocessing_steps.append(
         (re.compile(r"(?u)\b\w\w+\b").findall if tokenizer is None else tokenizer)
     )
@@ -136,6 +151,7 @@ def run(stream_data, model, on=None, tokenizer=None):
         tokens = _preprocessing_streps(preprocessing_steps, text)
         for w in tokens:
             model = model.learn_one(w, tokens=tokens)
-    print(cosine(model.get_embedding('she'), model.get_embedding('he')))
-    print(model.get_embedding('he'))
-    print(model.get_embedding('she'))    
+    print(model.contexts.values_storage)
+    # print(cosine(model.get_embedding('she'), model.get_embedding('he')))
+    print(model.vocabulary['he'].contexts)
+    print(model.get_embedding('he'))    
