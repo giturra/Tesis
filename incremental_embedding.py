@@ -1,8 +1,11 @@
 import numpy as np
+import operator
+import re
 from river.base.transformer import Transformer
 from river.feature_extraction.vectorize import VectorizerMixin
 from storage import Vocabulary, Context, WordRep
 from scipy.spatial.distance import cosine
+from nltk import word_tokenize
 
 
 class IncrementalWordEmbedding(Transformer, VectorizerMixin):
@@ -48,6 +51,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
         preprocessor=None,
         tokenizer=None,
         ngram_range=(1, 1),
+        is_ppmi=True
     ):
         super().__init__(
             v_size,
@@ -63,27 +67,45 @@ class WordContextMatrix(IncrementalWordEmbedding):
         self.vocabulary = Vocabulary(self.v_size)
         self.contexts = Context(self.c_size)
         self.d = 0
+
+        self.is_ppmi = is_ppmi
     
     def transform_one(self, x):
         return self.process_text(x)
 
-    def learn_one(self, x):
-        tokens = self.process_text(x)
-        #print(tokens)
-        for w in tokens:
-            if w not in self.vocabulary:
-                self.vocabulary.add(WordRep(w, self.c_size))
-            self.d += 1
-        for i, w in enumerate(tokens):
-            contexts = _get_contexts(i, self.w_size, tokens)
-            if w in self.vocabulary:
-                self.vocabulary[w].counter += 1
-            for c in contexts:
-                if c not in self.contexts:
-                    # if context full no add the word
-                    self.contexts.add(c)
-                if c in self.contexts:
-                    self.vocabulary[w].add_context(c)
+    # def learn_one(self, x):
+    #     tokens = self.process_text(x)
+    #     #print(tokens)
+    #     for w in tokens:
+    #         if w not in self.vocabulary:
+    #             self.vocabulary.add(WordRep(w, self.c_size))
+    #         self.d += 1
+    #     for i, w in enumerate(tokens):
+    #         contexts = _get_contexts(i, self.w_size, tokens)
+    #         if w in self.vocabulary:
+    #             self.vocabulary[w].counter += 1
+    #         for c in contexts:
+    #             if c not in self.contexts:
+    #                 # if context full no add the word
+    #                 self.contexts.add(c)
+    #             if c in self.contexts:
+    #                 self.vocabulary[w].add_context(c)
+    #     return self
+
+    def learn_one(self, x, **kwargs):
+        tokens = kwargs['tokens']
+        i = tokens.index(x)
+        self.d += 1
+        if x not in self.vocabulary:
+            self.vocabulary.add(WordRep(x, self.c_size))
+        contexts = _get_contexts(i, self.w_size, tokens)
+        if x in self.vocabulary:
+            self.vocabulary[x].counter += 1
+        for c in contexts:
+            if c not in self.contexts:
+                self.contexts.add(c)
+            if c in self.contexts and x in self.vocabulary:
+                self.vocabulary[x].add_context(c)
         return self
     
     def get_embedding(self, x):
@@ -91,12 +113,17 @@ class WordContextMatrix(IncrementalWordEmbedding):
             word_rep = self.vocabulary[x]
             embedding = np.zeros(self.c_size, dtype=float)
             contexts = word_rep.contexts.items()
-            for context, coocurence in contexts:
-                ind_c = self.contexts[context]
-                pmi = np.log2(
-                    (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
-                )
-                embedding[ind_c] = max(0, pmi)
+            if self.is_ppmi:
+                for context, coocurence in contexts:
+                    ind_c = self.contexts[context]
+                    pmi = np.log2(
+                        (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
+                    )
+                    embedding[ind_c] = max(0, pmi)
+            else:
+                for context, coocurence in contexts:
+                    ind_c = self.contexts[context]
+                    embedding[ind_c] = coocurence
                 # embedding[ind_c] = coocurence 
             return embedding
         return False
@@ -112,26 +139,22 @@ def _get_contexts(ind_word, w_size, tokens):
     return contexts
 
 
-from river.datasets import SMSSpam
+def _preprocessing_streps(preprocessing_steps, x):
+    for step in preprocessing_steps:
+        x = step(x)
+    return x
 
-dataset = SMSSpam()
-
-wcm = WordContextMatrix(10_000, 20, 3, on='body')
-
-# question el vocab size debe ser siempre mayor o igual al context size?
-
-for xi, y in dataset:
-    wcm = wcm.learn_one(xi)
-print(wcm.vocabulary['he'].contexts)
-print(wcm.get_embedding('he'))
-# print(len(wcm.contexts.values_storage.keys()))
-print(len(wcm.vocabulary.values_storage.items()))
-print(wcm.vocabulary.counter)
-print(wcm.vocabulary.is_full())
-#print(wcm.get_embedding('burger').shape)
-# print('its' in wcm.vocabulary)
-#print(cosine(wcm.get_embedding('sex'), wcm.get_embedding('bedroom')))
-# print(wcm.vocabulary['until'].contexts)
-# print(wcm.vocabulary.size)
-# print(wcm.contexts.values_storage)
-# print(wcm.vocabulary['go'].counter)
+def run(stream_data, model, on=None, tokenizer=None):
+    preprocessing_steps = []
+    if on is not None:
+        preprocessing_steps.append(operator.itemgetter(on))
+    preprocessing_steps.append(
+        (re.compile(r"(?u)\b\w\w+\b").findall if tokenizer is None else tokenizer)
+    )
+    for text, y in stream_data:
+        tokens = _preprocessing_streps(preprocessing_steps, text)
+        for w in tokens:
+            model = model.learn_one(w, tokens=tokens)
+    print(cosine(model.get_embedding('she'), model.get_embedding('he')))
+    print(model.get_embedding('he'))
+    print(model.get_embedding('she'))    
