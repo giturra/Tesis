@@ -1,6 +1,7 @@
 import numpy as np
 import operator
 import re
+from pprint import pprint
 from river.base.transformer import Transformer
 from river.feature_extraction.vectorize import VectorizerMixin
 from storage import Vocabulary, Context, WordRep
@@ -103,21 +104,15 @@ class WordContextMatrix(IncrementalWordEmbedding):
             contexts = word_rep.contexts.items()
             if self.is_ppmi:
                 for context, coocurence in contexts:
-                    
                     ind_c = self.contexts[context]
-                    print(ind_c)
                     pmi = np.log2(
                         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
                     )
-                    
                     embedding[ind_c] = max(0, pmi)
-                    print(embedding[ind_c])
             else:
                 for context, coocurence in contexts:
-                    print(coocurence)
                     ind_c = self.contexts[context]
-                    embedding[ind_c] = coocurence
-                # embedding[ind_c] = coocurence 
+                    embedding[ind_c] = coocurence 
             return embedding
         return False
 
@@ -151,7 +146,7 @@ def run(stream_data, model, on=None, tokenizer=None, lower_case=True):
         tokens = _preprocessing_streps(preprocessing_steps, text)
         for w in tokens:
             model = model.learn_one(w, tokens=tokens)
-    print(model.contexts.values_storage)
-    # print(cosine(model.get_embedding('she'), model.get_embedding('he')))
-    print(model.vocabulary['he'].contexts)
-    print(model.get_embedding('he'))    
+    #print(model.contexts.values_storage)
+    pprint(cosine(model.get_embedding('john'), model.get_embedding('james')))
+    #print(model.vocabulary['hello'].contexts)
+    #pprint(model.get_embedding('j'))    
