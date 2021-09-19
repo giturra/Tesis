@@ -72,9 +72,26 @@ class WordContextMatrix(IncrementalWordEmbedding):
         self.is_ppmi = is_ppmi
 
         self.vocabulary.add(WordRep('unk', self.c_size))
+
+        self.f = 0
     
     def transform_one(self, x):
-        ...
+        if x in self.vocabulary:
+            word_rep = self.vocabulary[x]
+            embedding = np.zeros(self.c_size, dtype=float)
+            contexts = word_rep.contexts.items()
+            if self.is_ppmi:
+                for context, coocurence in contexts:
+                    ind_c = self.contexts[context]
+                    pmi = np.log2(
+                        (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
+                    )
+                    embedding[ind_c] = max(0, pmi)
+            else:
+                for context, coocurence in contexts:
+                    ind_c = self.contexts[context]
+                    embedding[ind_c] = coocurence 
+            return embedding
 
     def learn_one(self, x, **kwargs):
         tokens = kwargs['tokens']
@@ -95,6 +112,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
                 focus_word.add_context('unk')
             elif c in self.contexts:
                 focus_word.add_context(c)
+        print(f"{focus_word.word} {self.transform_one(focus_word.word)}")
         return self
     
     def get_embedding(self, x):
@@ -147,6 +165,6 @@ def run(stream_data, model, on=None, tokenizer=None, lower_case=True):
         for w in tokens:
             model = model.learn_one(w, tokens=tokens)
     #print(model.contexts.values_storage)
-    pprint(cosine(model.get_embedding('john'), model.get_embedding('james')))
+    pprint(cosine(model.get_embedding('she'), model.get_embedding('he')))
     #print(model.vocabulary['hello'].contexts)
     #pprint(model.get_embedding('j'))    
