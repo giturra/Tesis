@@ -112,7 +112,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
                 focus_word.add_context('unk')
             elif c in self.contexts:
                 focus_word.add_context(c)
-        print(f"{focus_word.word} {self.transform_one(focus_word.word)}")
+        # print(f"{focus_word.word} {self.transform_one(focus_word.word)}")
         return self
     
     def get_embedding(self, x):
