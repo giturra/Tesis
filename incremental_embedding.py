@@ -4,6 +4,7 @@ import re
 from pprint import pprint
 from river.base.transformer import Transformer
 from river.feature_extraction.vectorize import VectorizerMixin
+from river.utils import VectorDict
 from storage import Vocabulary, Context, WordRep
 from scipy.spatial.distance import cosine
 from nltk import word_tokenize
@@ -77,9 +78,7 @@ class WordContextMatrix(IncrementalWordEmbedding):
     
     def transform_one(self, x):
         x = x if x in self.vocabulary else 'unk'
-        word_rep = self.vocabulary[x] 
-        # embedding = np.zeros(self.c_size, dtype=float)
-        # embedding = {}
+        word_rep = self.vocabulary[x]
         contexts = word_rep.contexts.items()
         if self.is_ppmi:
             embedding = {
@@ -87,20 +86,9 @@ class WordContextMatrix(IncrementalWordEmbedding):
                         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
                     ), 0) for context, coocurence in contexts
             }
-            # for context, coocurence in contexts:
-            #     # ind_c = self.contexts[context]
-            #     pmi = np.log2(
-            #         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
-            #     )
-            #     # embedding[ind_c] = max(0, pmi)
-            #     embedding[context] = max(0, pmi)
         else:
-            # for context, coocurence in contexts:
-            #     # ind_c = self.contexts[context]
-            #     # embedding[ind_c] = coocurence 
-            #     embedding[context] = coocurence
-            embedding = {context: coourrence for context, coocurence in contexts}
-        return embedding
+            embedding = dict(word_rep.contexts)
+        return VectorDict(embedding)
 
 
     def learn_one(self, x, **kwargs):
