@@ -76,22 +76,32 @@ class WordContextMatrix(IncrementalWordEmbedding):
         self.f = 0
     
     def transform_one(self, x):
-        if x in self.vocabulary:
-            word_rep = self.vocabulary[x]
-            embedding = np.zeros(self.c_size, dtype=float)
-            contexts = word_rep.contexts.items()
-            if self.is_ppmi:
-                for context, coocurence in contexts:
-                    ind_c = self.contexts[context]
-                    pmi = np.log2(
+        x = x if x in self.vocabulary else 'unk'
+        word_rep = self.vocabulary[x] 
+        # embedding = np.zeros(self.c_size, dtype=float)
+        # embedding = {}
+        contexts = word_rep.contexts.items()
+        if self.is_ppmi:
+            embedding = {
+                context: max(np.log2(
                         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
-                    )
-                    embedding[ind_c] = max(0, pmi)
-            else:
-                for context, coocurence in contexts:
-                    ind_c = self.contexts[context]
-                    embedding[ind_c] = coocurence 
-            return embedding
+                    ), 0) for context, coocurence in contexts
+            }
+            # for context, coocurence in contexts:
+            #     # ind_c = self.contexts[context]
+            #     pmi = np.log2(
+            #         (coocurence * self.d) / (word_rep.counter * self.vocabulary[context].counter) 
+            #     )
+            #     # embedding[ind_c] = max(0, pmi)
+            #     embedding[context] = max(0, pmi)
+        else:
+            # for context, coocurence in contexts:
+            #     # ind_c = self.contexts[context]
+            #     # embedding[ind_c] = coocurence 
+            #     embedding[context] = coocurence
+            embedding = {context: coourrence for context, coocurence in contexts}
+        return embedding
+
 
     def learn_one(self, x, **kwargs):
         tokens = kwargs['tokens']
